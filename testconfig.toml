@@ -1,0 +1,7 @@
+[foobar]
+example = "test"
+
+[build]
+version = "1.0.0"
+author = "John Doe"
+description = "A sample project"

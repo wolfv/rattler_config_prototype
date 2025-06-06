@@ -1,0 +1,9 @@
+[package]
+name = "rattler_config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+miette = "7.6.0"
+serde = { version = "1.0.219", features = ["derive"] }
+toml = { version = "0.8" }
