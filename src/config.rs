@@ -1,22 +1,66 @@
-use std::path::Path;
+use std::{collections::HashMap, path::{Path, PathBuf}};
 
 use miette::IntoDiagnostic;
+use rattler_conda_types::NamedChannelOrUrl;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use url::Url;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BuildConfig {
-    pub version: Option<String>,
-    pub author: Option<String>,
-    pub description: Option<String>,
-}
+use crate::config::{build::BuildConfig, concurreny::ConcurrencyConfig, proxy::ProxyConfig, repodata_config::RepodataConfig};
+
+mod s3;
+mod concurreny;
+mod repodata_config;
+mod proxy;
+mod build;
+
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConfigBase<T> {
     #[serde(default)]
+    #[serde(alias = "default_channels")] // BREAK: remove to stop supporting snake_case alias
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub default_channels: Vec<NamedChannelOrUrl>,
+
+    /// Path to the file containing the authentication token.
+    #[serde(default)]
+    #[serde(alias = "authentication_override_file")] // BREAK: remove to stop supporting snake_case alias
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication_override_file: Option<PathBuf>,
+
+    /// If set to true, pixi will not verify the TLS certificate of the server.
+    #[serde(default)]
+    #[serde(alias = "tls_no_verify")] // BREAK: remove to stop supporting snake_case alias
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tls_no_verify: Option<bool>,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub mirrors: HashMap<Url, Vec<Url>>,
+
+    #[serde(default)]
     pub build: Option<BuildConfig>,
+
+    /// Configuration for repodata fetching.
+    #[serde(alias = "repodata_config")] // BREAK: remove to stop supporting snake_case alias
+    #[serde(default, skip_serializing_if = "RepodataConfig::is_empty")]
+    pub repodata_config: RepodataConfig,
+
+    /// Configuration for the concurreny of rattler.
+    #[serde(default)]
+    #[serde(skip_serializing_if = "ConcurrencyConfig::is_default")]
+    pub concurrency: ConcurrencyConfig,
+
+    /// Https/Http proxy configuration for pixi
+    #[serde(default)]
+    #[serde(skip_serializing_if = "ProxyConfig::is_default")]
+    pub proxy_config: ProxyConfig,
 
     #[serde(flatten)]
     pub extensions: T,
+
+    #[serde(skip)]
+    #[serde(alias = "loaded_from")] // BREAK: remove to stop supporting snake_case alias
+    pub loaded_from: Vec<PathBuf>,
 }
 
 pub trait Config: Serialize + for<'de> Deserialize<'de> + std::fmt::Debug + Clone + PartialEq + Eq + Default{
@@ -71,6 +115,8 @@ where
         } else {
             self.build = other.build.clone();
         }
+
+        self.repodata_config.merge(other.repodata_config.clone());
         
         return Ok(());
     }

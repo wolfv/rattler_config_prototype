@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::extensible_config::{Config, ConfigBase};
+use crate::config::{Config, ConfigBase};
 
-mod extensible_config;
+mod config;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct FoobarConfig {
@@ -47,7 +47,7 @@ fn main() {
     }
 
     let config_file = &args[1];
-    match extensible_config::load_config::<()>(config_file) {
+    match config::load_config::<()>(config_file) {
         Ok(config) => {
             println!("Loaded config: {:?}", config);
         }
