@@ -82,14 +82,16 @@ pub struct ConfigBase<T> {
     #[serde(skip)]
     #[serde(alias = "loaded_from")] // BREAK: remove to stop supporting snake_case alias
     pub loaded_from: Vec<PathBuf>,
-    // Missing from pixi:
-    // change_ps1
-    // force_activate
-    // experimental
-    // shell
-    // pinning_strategy
-    // detached_environments
-    // pypi_config
+    // Missing in rattler but should be available in pixi:
+    //   experimental
+    //   shell
+    //   pinning_strategy
+    //   detached_environments
+    //   pypi_config
+    //
+    // Deprecated fields:
+    //   change_ps1
+    //   force_activate
 }
 
 // ChannelConfig does not implement `Default` so we need to provide a default implementation.
