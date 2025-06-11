@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::config::Config;
+
 // Making the default values part of pixi_config to allow for printing the
 // default settings in the future.
 /// The default maximum number of concurrent solves that can be run at once.
@@ -14,7 +16,6 @@ fn default_max_concurrent_solves() -> usize {
 fn default_max_concurrent_downloads() -> usize {
     50
 }
-
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -42,10 +43,18 @@ impl Default for ConcurrencyConfig {
 }
 
 impl ConcurrencyConfig {
-    /// Merge the given ConcurrencyConfig into the current one.
-    pub fn merge(self, other: Self) -> Self {
-        // Merging means using the other value if they are none default.
-        Self {
+    pub fn is_default(&self) -> bool {
+        ConcurrencyConfig::default() == *self
+    }
+}
+
+impl Config for ConcurrencyConfig {
+    fn get_extension_name(&self) -> String {
+        "concurrency".to_string()
+    }
+
+    fn merge_config(self, other: &Self) -> Result<Self, miette::Error> {
+        Ok(Self {
             solves: if other.solves != ConcurrencyConfig::default().solves {
                 other.solves
             } else {
@@ -56,10 +65,17 @@ impl ConcurrencyConfig {
             } else {
                 self.downloads
             },
-        }
+        })
     }
 
-    pub fn is_default(&self) -> bool {
-        ConcurrencyConfig::default() == *self
+    fn validate(&self) -> Result<(), miette::Error> {
+        if self.solves == 0 || self.downloads == 0 {
+            return Err(miette::miette!("Concurrency values must be greater than 0"));
+        }
+        Ok(())
+    }
+
+    fn keys(&self) -> Vec<String> {
+        vec!["solves".to_string(), "downloads".to_string()]
     }
 }

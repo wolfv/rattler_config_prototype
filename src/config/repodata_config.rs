@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use crate::config::Config;
+
 #[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct RepodataChannelConfig {
@@ -72,26 +74,37 @@ impl RepodataConfig {
     pub fn is_empty(&self) -> bool {
         self.default.is_empty() && self.per_channel.is_empty()
     }
+}
+
+impl Config for RepodataConfig {
+    fn get_extension_name(&self) -> String {
+        "repodata".to_string()
+    }
 
     /// Merge the given RepodataConfig into the current one.
-    /// `other` is mutable to allow for moving the values out of it.
-    /// The given config will have higher priority
-    pub fn merge(&self, mut other: Self) -> Self {
-        let mut per_channel: HashMap<_, _> = self
-            .per_channel
-            .clone()
-            .into_iter()
-            .map(|(url, config)| {
-                let other_config = other.per_channel.remove(&url).unwrap_or_default();
-                (url, config.merge(other_config))
-            })
-            .collect();
-
-        per_channel.extend(other.per_channel);
-
-        Self {
-            default: self.default.merge(other.default),
-            per_channel,
+    /// The `other` configuration should take priority over the current one.
+    fn merge_config(self, other: &Self) -> Result<Self, miette::Error> {
+        // Make `other` mutable to allow for moving the values out of it.
+        let mut merged = self.clone();
+        merged.default = merged.default.merge(other.default.clone());
+        for (url, config) in &other.per_channel {
+            merged
+                .per_channel
+                .entry(url.clone())
+                .and_modify(|existing| *existing = existing.merge(config.clone()))
+                .or_insert_with(|| config.clone());
         }
+        Ok(merged)
+    }
+
+    fn validate(&self) -> Result<(), miette::Error> {
+        if self.default.is_empty() && self.per_channel.is_empty() {
+            return Err(miette::miette!("RepodataConfig must not be empty"));
+        }
+        Ok(())
+    }
+
+    fn keys(&self) -> Vec<String> {
+        vec!["default".to_string(), "per-channel".to_string()]
     }
 }

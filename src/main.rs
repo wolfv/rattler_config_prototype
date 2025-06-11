@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::{Config, ConfigBase};
 
 mod config;
+mod edit;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct FoobarConfig {
@@ -20,9 +21,12 @@ impl Config for ConfigExtension {
         "foobar".to_string()
     }
 
-    fn merge_config(&mut self, other: &Self) -> Result<(), miette::Error> {
-        self.foobar.example = other.foobar.example.clone();
-        Ok(())
+    fn merge_config(self, other: &Self) -> Result<Self, miette::Error> {
+        Ok(Self {
+            foobar: FoobarConfig {
+                example: other.foobar.example.clone(),
+            },
+        })
     }
 
     fn validate(&self) -> Result<(), miette::Error> {
@@ -33,8 +37,8 @@ impl Config for ConfigExtension {
         }
     }
 
-    fn keys(&self) -> &[&str] {
-        &["foobar.example"]
+    fn keys(&self) -> Vec<String> {
+        vec!["foobar".to_string()]
     }
 }
 

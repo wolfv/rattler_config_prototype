@@ -1,7 +1,9 @@
-use std::str::FromStr;
-use serde::{Deserialize, Serialize, de::Error};
 use rattler_conda_types::package::ArchiveType;
 use rattler_package_streaming::write::CompressionLevel;
+use serde::{Deserialize, Serialize, de::Error};
+use std::str::FromStr;
+
+use crate::config::Config;
 
 /// Container for the package format and compression level
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -11,7 +13,6 @@ pub struct PackageFormatAndCompression {
     /// The compression level that is selected
     pub compression_level: CompressionLevel,
 }
-
 
 #[derive(Clone, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -105,5 +106,29 @@ impl Serialize for PackageFormatAndCompression {
         };
 
         serializer.serialize_str(format!("{}:{}", package_format, compression_level).as_str())
+    }
+}
+
+impl Config for BuildConfig {
+    fn get_extension_name(&self) -> String {
+        "build".to_string()
+    }
+
+    fn merge_config(self, other: &Self) -> Result<Self, miette::Error> {
+        return Ok(Self {
+            package_format: other
+                .package_format
+                .as_ref()
+                .or(self.package_format.as_ref())
+                .cloned(),
+        });
+    }
+
+    fn validate(&self) -> Result<(), miette::Error> {
+        Ok(())
+    }
+
+    fn keys(&self) -> Vec<String> {
+        vec!["package_format".to_string()]
     }
 }
